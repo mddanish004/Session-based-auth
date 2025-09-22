@@ -39,4 +39,29 @@ router.post('/register', async (req, res) => {
     });
 });
 
+router.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+    const existingUserArr = await db.select().from(users).where(eq(users.email, email));
+    if (!(existingUserArr.length > 0)) {
+        return res.status(401).json({
+            error: 'You are unauthorised to login. Register please'
+        });
+    }
+    const existingUser = existingUserArr[0];
+    const hashed = hashPassword(password, existingUser.salt);
+    if (existingUser.password_hash !== hashed) {
+        return res.status(401).json({
+            error: "Wrong password"
+        });
+    }
+    const sessionToken = generateSalt();
+    await db.insert(sessions).values({
+        userId: existingUser.id,
+        sessionToken
+    });
+    return res.status(201).json({
+        message: 'User logged in successfully'
+    });
+})
+
 export default router;
